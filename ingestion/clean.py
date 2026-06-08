@@ -28,4 +28,4 @@ def clean_all(input_path: str = "data/parsed.json",
     print(f"Output written to: {output_path}")
 
 if __name__ == "__main__":
-    clean_all()
+    clean_all() 
