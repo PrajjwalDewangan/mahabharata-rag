@@ -8,13 +8,15 @@ A retrieval-augmented generation (RAG) system for querying the complete Mahabhar
 - **Status**: In progress
 
 ## Project Structure
-ingestion/   # Parsing and embedding pipeline
-retrieval/   # Query and reranking logic
-generation/  # Prompt templates and LLM integration
-evaluation/  # RAGAS eval harness
-api/         # FastAPI wrapper
-ui/          # Chat frontend
 
+| Folder | Description |
+|---|---|
+| `ingestion/` | Parsing and embedding pipeline |
+| `retrieval/` | Query and reranking logic |
+| `generation/` | Prompt templates and LLM integration |
+| `evaluation/` | RAGAS eval harness |
+| `api/` | FastAPI wrapper |
+| `ui/` | Chat frontend |
 ## Setup
 ```bash
 git clone https://github.com/PrajjwalDewangan/mahabharata-rag
