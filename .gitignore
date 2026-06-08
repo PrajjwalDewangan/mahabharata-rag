@@ -3,5 +3,6 @@ venv/
 __pycache__/
 *.pyc
 data/parsed.json
+data/cleaned.json
 data/txt/
 check_text.py
