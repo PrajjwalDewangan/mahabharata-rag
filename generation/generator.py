@@ -79,7 +79,7 @@ class ConversationHistory:
 def build_prompt(query: str, chunks: list[dict], history: ConversationHistory) -> str:
     passages = []
     for i, chunk in enumerate(chunks, 1):
-        header = f"[Passage {i} | {chunk['parva_name']}, Section {chunk['section_number']}]"
+        header = f"[Source {i}]  {chunk['parva_name']}, Section {chunk['section_number']}"
         passages.append(f"{header}\n{chunk['text']}")
     passages_block = "\n\n".join(passages)
 
