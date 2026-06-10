@@ -1,8 +1,8 @@
 ---
 title: Mahabharata RAG
 emoji: ☸
-colorFrom: orange
-colorTo: yellow
+colorFrom: yellow
+colorTo: red
 sdk: docker
 pinned: false
 ---
