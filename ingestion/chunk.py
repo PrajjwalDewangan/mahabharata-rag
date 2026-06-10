@@ -12,7 +12,6 @@ def split_into_sentences(text: str) -> list[str]:
 def split_large_paragraph(text: str) -> list[str]:
     sentences = split_into_sentences(text)
 
-    # Fallback: if a single sentence exceeds MAX_WORDS, split by word count
     chunks = []
     current = []
     current_words = 0
@@ -20,7 +19,6 @@ def split_large_paragraph(text: str) -> list[str]:
     for sentence in sentences:
         sentence_words = len(sentence.split())
 
-        # sentence itself is too large — force split by words
         if sentence_words > MAX_WORDS:
             if current:
                 chunks.append(' '.join(current))
