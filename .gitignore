@@ -4,9 +4,8 @@ __pycache__/
 *.pyc
 data/parsed.json
 data/cleaned.json
-data/chunks.json
-data/txt/
 data/chroma/
+data/txt/
 check_text.py
 check_chunks.py
 check_retrieval.py

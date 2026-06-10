@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mahabharata RAG — KMG Translation Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --ink:         #1a1510;
+      --ink-soft:    #4a3f30;
+      --ink-muted:   #8a7a68;
+      --parchment:   #f5f0e8;
+      --parchment-2: #ede6d6;
+      --parchment-3: #e2d9c5;
+      --saffron:     #c8692a;
+      --saffron-dim: #d4895a;
+      --gold:        #b8972a;
+      --gold-dim:    #d4b84a;
+      --border:      #c8b89a;
+      --border-soft: #ddd0b8;
+
+      --font-display: 'Crimson Pro', Georgia, serif;
+      --font-mono:    'DM Mono', 'Courier New', monospace;
+
+      --radius: 3px;
+      --transition: 180ms ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--parchment);
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas:
+        "header  header"
+        "chat    sources"
+        "input   sources";
+      height: 100vh;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .header {
+      grid-area: header;
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+      background: var(--parchment);
+    }
+
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--ink);
+    }
+
+    .header-title span {
+      color: var(--saffron);
+    }
+
+    .header-subtitle {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      font-style: italic;
+      font-weight: 300;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-reset {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--ink-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: color var(--transition), border-color var(--transition);
+    }
+
+    .btn-reset:hover {
+      color: var(--saffron);
+      border-color: var(--saffron-dim);
+    }
+
+    .chat-pane {
+      grid-area: chat;
+      overflow-y: auto;
+      padding: 28px 36px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      scroll-behavior: smooth;
+    }
+
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      max-width: 480px;
+      padding: 40px 0;
+    }
+
+    .empty-chakra {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.25;
+      user-select: none;
+    }
+
+    .empty-state h2 {
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 0.95rem;
+      color: var(--ink-muted);
+      font-style: italic;
+      line-height: 1.7;
+    }
+
+    .empty-suggestions {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .suggestion {
+      font-size: 0.88rem;
+      color: var(--ink-soft);
+      background: var(--parchment-2);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-display);
+      font-style: italic;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .suggestion:hover {
+      background: var(--parchment-3);
+      border-color: var(--border);
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      animation: fadeUp 200ms ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-role {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    .message.user .message-role  { color: var(--saffron); }
+
+    .message-body {
+      font-size: 1rem;
+      color: var(--ink);
+      line-height: 1.75;
+    }
+
+    .message.user .message-body {
+      color: var(--ink-soft);
+      font-style: italic;
+    }
+
+    .message-body .citation {
+      display: inline;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--gold);
+      background: rgba(184,151,42,0.08);
+      border: 1px solid rgba(184,151,42,0.25);
+      border-radius: 2px;
+      padding: 1px 5px;
+      white-space: nowrap;
+    }
+
+    .thinking {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink-muted);
+      font-style: italic;
+      font-size: 0.92rem;
+    }
+
+    .thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .thinking-dots span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--saffron-dim);
+      animation: pulse 1.2s ease infinite;
+    }
+
+    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
+      40%           { opacity: 1;   transform: scale(1); }
+    }
+
+    .input-bar {
+      grid-area: input;
+      border-top: 1px solid var(--border);
+      padding: 16px 36px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      background: var(--parchment);
+    }
+
+    .input-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 48px;
+      max-height: 140px;
+      resize: none;
+      background: var(--parchment-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--ink);
+      line-height: 1.5;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      overflow-y: auto;
+    }
+
+    textarea::placeholder { color: var(--ink-muted); font-style: italic; }
+
+    textarea:focus {
+      border-color: var(--saffron-dim);
+      box-shadow: 0 0 0 3px rgba(200,105,42,0.08);
+    }
+
+    .btn-send {
+      height: 48px;
+      min-width: 80px;
+      background: var(--saffron);
+      color: var(--parchment);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background var(--transition), opacity var(--transition);
+    }
+
+    .btn-send:hover:not(:disabled) { background: #a8581f; }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .sources-panel {
+      grid-area: sources;
+      border-left: 1px solid var(--border);
+      background: var(--parchment-2);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sources-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border-soft);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      position: sticky;
+      top: 0;
+      background: var(--parchment-2);
+      z-index: 1;
+    }
+
+    .sources-empty {
+      padding: 28px 20px;
+      font-size: 0.88rem;
+      color: var(--ink-muted);
+      font-style: italic;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .source-card {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-soft);
+      animation: fadeUp 200ms ease both;
+    }
+
+    .source-card:last-child { border-bottom: none; }
+
+    .source-parva {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--saffron);
+      margin-bottom: 3px;
+    }
+
+    .source-section {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin-bottom: 6px;
+    }
+
+    .source-preview {
+      font-size: 0.82rem;
+      color: var(--ink-muted);
+      line-height: 1.6;
+      font-style: italic;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .history-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+      padding: 0 36px;
+      padding-bottom: 2px;
+    }
+
+    .error-msg {
+      background: rgba(200,105,42,0.08);
+      border: 1px solid rgba(200,105,42,0.3);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      color: var(--saffron);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "chat"
+          "input";
+      }
+      .sources-panel { display: none; }
+      .chat-pane { padding: 20px 18px 8px; }
+      .input-bar { padding: 12px 18px 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <header class="header">
+    <div class="header-title">
+      Mahābhārata <span>∴</span> RAG
+    </div>
+    <div class="header-subtitle">
+      Kisari Mohan Ganguli translation · hybrid retrieval
+    </div>
+    <div class="header-actions">
+      <button class="btn-reset" onclick="resetChat()">Reset session</button>
+    </div>
+  </header>
+
+  <main class="chat-pane" id="chatPane">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-chakra">☸</div>
+      <h2>Ask about the Mahābhārata</h2>
+      <p>Answers are drawn directly from the KMG English translation.<br/>
+         Sources are shown for every response.</p>
+      <div class="empty-suggestions">
+        <button class="suggestion" onclick="sendSuggestion(this)">Who was Karna, and why did he fight for the Kauravas?</button>
+        <button class="suggestion" onclick="sendSuggestion(this)">What happened at the dice game in the Sabha Parva?</button>
+        <button class="suggestion" onclick="sendSuggestion(this)">What is the Bhagavad Gita about?</button>
+        <button class="suggestion" onclick="sendSuggestion(this)">Describe the relationship between Draupadi and the Pandavas.</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="history-badge" id="historyBadge" style="display:none">
+    ○ <span id="historyCount">0</span> turn(s) in context window
+  </div>
+
+  <footer class="input-bar">
+    <div class="input-wrap">
+      <textarea
+        id="queryInput"
+        placeholder="Ask a question about the Mahābhārata…"
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+    </div>
+    <button class="btn-send" id="sendBtn" onclick="sendQuery()">Ask</button>
+  </footer>
+
+  <aside class="sources-panel">
+    <div class="sources-header">Retrieved passages</div>
+    <div id="sourcesContent">
+      <div class="sources-empty">Sources will appear here after your first question.</div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  let isLoading = false;
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendQuery();
+    }
+  }
+
+  function sendSuggestion(btn) {
+    const input = document.getElementById('queryInput');
+    input.value = btn.textContent.trim();
+    autoResize(input);
+    sendQuery();
+  }
+
+  function appendMessage(role, html) {
+    const empty = document.getElementById('emptyState');
+    if (empty) empty.remove();
+
+    const pane = document.getElementById('chatPane');
+
+    const wrap = document.createElement('div');
+    wrap.className = `message ${role}`;
+
+    const roleLabel = document.createElement('div');
+    roleLabel.className = 'message-role';
+    roleLabel.textContent = role === 'user' ? 'You' : 'Guide';
+
+    const body = document.createElement('div');
+    body.className = 'message-body';
+    body.innerHTML = html;
+
+    wrap.appendChild(roleLabel);
+    wrap.appendChild(body);
+    pane.appendChild(wrap);
+    pane.scrollTop = pane.scrollHeight;
+
+    return wrap;
+  }
+
+  function showThinking() {
+    const empty = document.getElementById('emptyState');
+    if (empty) empty.remove();
+
+    const pane = document.getElementById('chatPane');
+    const el = document.createElement('div');
+    el.id = 'thinking';
+    el.className = 'thinking';
+    el.innerHTML = `
+      <div class="thinking-dots">
+        <span></span><span></span><span></span>
+      </div>
+      Consulting the text…
+    `;
+    pane.appendChild(el);
+    pane.scrollTop = pane.scrollHeight;
+  }
+
+  function removeThinking() {
+    const el = document.getElementById('thinking');
+    if (el) el.remove();
+  }
+
+  function renderSources(sources) {
+    const container = document.getElementById('sourcesContent');
+    if (!sources || sources.length === 0) {
+      container.innerHTML = '<div class="sources-empty">No sources returned.</div>';
+      return;
+    }
+    container.innerHTML = sources.map(s => `
+      <div class="source-card">
+        <div class="source-parva">${escHtml(s.parva_name)}</div>
+        <div class="source-section">Section ${s.section_number}</div>
+        <div class="source-preview">${escHtml(s.preview)}</div>
+      </div>
+    `).join('');
+  }
+
+  function formatAnswer(text) {
+    const escaped = escHtml(text);
+    return escaped.replace(
+      /\[([^\]]{3,80})\]/g,
+      '<span class="citation">[$1]</span>'
+    );
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function updateHistoryBadge(count) {
+    const badge = document.getElementById('historyBadge');
+    const span  = document.getElementById('historyCount');
+    badge.style.display = count > 0 ? 'block' : 'none';
+    span.textContent = count;
+  }
+
+  async function sendQuery() {
+    if (isLoading) return;
+
+    const input = document.getElementById('queryInput');
+    const query = input.value.trim();
+    if (!query) return;
+
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    input.value = '';
+    input.style.height = 'auto';
+
+    appendMessage('user', escHtml(query));
+    showThinking();
+
+    try {
+      const res = await fetch('/chat', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ query }),
+      });
+
+      removeThinking();
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+        appendMessage('assistant', `<span class="error-msg">Error: ${escHtml(err.detail)}</span>`);
+        return;
+      }
+
+      const data = await res.json();
+      appendMessage('assistant', formatAnswer(data.answer));
+      renderSources(data.sources);
+      updateHistoryBadge(data.history_length);
+
+    } catch (err) {
+      removeThinking();
+      appendMessage('assistant', `<span class="error-msg">Could not reach the server. Is it running?</span>`);
+    } finally {
+      isLoading = false;
+      document.getElementById('sendBtn').disabled = false;
+      input.focus();
+    }
+  }
+
+  async function resetChat() {
+    await fetch('/reset', { method: 'POST' });
+
+    const pane = document.getElementById('chatPane');
+    pane.innerHTML = `
+      <div class="empty-state" id="emptyState">
+        <div class="empty-chakra">☸</div>
+        <h2>Ask about the Mahābhārata</h2>
+        <p>Answers are drawn directly from the KMG English translation.<br/>
+           Sources are shown for every response.</p>
+        <div class="empty-suggestions">
+          <button class="suggestion" onclick="sendSuggestion(this)">Who was Karna, and why did he fight for the Kauravas?</button>
+          <button class="suggestion" onclick="sendSuggestion(this)">What happened at the dice game in the Sabha Parva?</button>
+          <button class="suggestion" onclick="sendSuggestion(this)">What is the Bhagavad Gita about?</button>
+          <button class="suggestion" onclick="sendSuggestion(this)">Describe the relationship between Draupadi and the Pandavas.</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('sourcesContent').innerHTML =
+      '<div class="sources-empty">Sources will appear here after your first question.</div>';
+
+    updateHistoryBadge(0);
+  }
+
+  window.addEventListener('load', () => {
+    document.getElementById('queryInput').focus();
+  });
+</script>
+
+</body>
+</html>

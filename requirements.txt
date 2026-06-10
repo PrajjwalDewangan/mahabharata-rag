@@ -2,6 +2,10 @@ langchain
 langchain-community
 chromadb
 sentence-transformers
-ollama
 python-dotenv
 tqdm
+rank_bm25
+fastapi
+uvicorn
+groq
+requests
