@@ -1,3 +1,12 @@
+---
+title: Mahabharata RAG
+emoji: ☸
+colorFrom: orange
+colorTo: yellow
+sdk: docker
+pinned: false
+---
+
 # Mahabharata RAG
 
 A retrieval-augmented generation (RAG) system for querying the complete Mahabharata (KMG English translation) using natural language.
