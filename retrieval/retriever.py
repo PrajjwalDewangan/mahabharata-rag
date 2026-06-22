@@ -31,18 +31,17 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions"
 
-REPHRASING_PROMPT = """You are helping a search system find relevant passages in the Mahabharata text (Kisari Mohan Ganguli English translation).
- 
-Generate {n} alternative search queries for the following question. Each rephrasing should approach the topic differently to maximize the chance of finding relevant passages.
- 
+REPHRASING_PROMPT = """Generate {n} alternative search queries to find relevant passages about the following question in the Mahabharata text.
+
 Original query: {query}
- 
+
 Rules:
-1. Include specific Mahabharata terminology where relevant — parva names (e.g. Mahaprasthanika Parva, Mausala Parva), character epithets (e.g. Dhananjaya for Arjuna, Vrikodara for Bhima), Sanskrit terms
-2. Vary between broad semantic phrasings and specific keyword phrasings
-3. Think about how the KMG translation might actually describe this event — the language is archaic and formal
-4. Output ONLY the {n} queries, one per line, no numbering, no explanation, no preamble
- 
+1. Use alternative names or epithets for characters if you are CERTAIN of them (e.g. Arjuna = Dhananjaya = Phalguna = Partha, Bhima = Bhimasena = Vrikodara, Krishna = Vasudeva = Keshava)
+2. Vary the phrasing — try both broad and specific angles
+3. Do NOT guess parva names or section numbers — only include them if they appear in the original query
+4. Do NOT mix up characters — each rephrasing must be about the same character as the original query
+5. Output ONLY the {n} queries, one per line, no numbering, no explanation
+
 Alternative queries:"""
 
 def tokenise(text: str) -> list[str]:

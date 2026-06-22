@@ -31,7 +31,7 @@ def evaluate(retriever: MahabharataRetriever, test_set: list[dict]) -> dict:
         retrieved = retriever.retrieve(
             query,
             final_top_n=max_k,
-            multi_query=case.get("multi_query", False)
+            multi_query=case.get("multi_query", False),
         )
 
         query_result = {
