@@ -1,0 +1,178 @@
+[
+  {
+    "query": "Who killed Karna?",
+    "relevant_chunks": [
+      {"parva_name": "Karna Parva", "section_number": 90},
+      {"parva_name": "Karna Parva", "section_number": 89}
+    ],
+    "expected_answer_summary": "Arjuna killed Karna after Karna's chariot wheel got stuck in the ground and he asked for a pause, which Krishna told Arjuna to refuse.",
+    "category": "factual_event",
+    "notes": "Earlier testing found Arjuna correctly identified after citation fix, but verify the death scene itself (chariot wheel incident) is retrieved, not just general battle context."
+  },
+  {
+    "query": "Who killed Bhishma?",
+    "relevant_chunks": [
+      {"parva_name": "Bhishma Parva", "section_number": 119}
+    ],
+    "multi_query": true,
+    "expected_answer_summary": "Arjuna struck Bhishma down with arrows, with Shikhandi positioned in front of him as Bhishma refused to fight a warrior he considered a woman in a former life.",
+    "category": "factual_event",
+    "notes": "FAILED in production: 'The provided passages do not contain enough information to answer this fully.' Complete retrieval failure - the right chunk did not appear in top-5."
+  },
+  {
+    "query": "What was Bhishma's vow?",
+    "relevant_chunks": [
+      {"parva_name": "Udyoga Parva", "section_number": 180},
+      {"parva_name": "Adi Parva", "section_number": 102}
+    ],
+    "expected_answer_summary": "Bhishma vowed lifelong celibacy and to never claim the throne, so his father Shantanu could marry Satyavati.",
+    "category": "descriptive",
+    "notes": "Worked well in production - retrieved Udyoga Parva 180 and Vana Parva 81 with coherent answer. Good baseline for comparison against the failed 'who killed' query on the same character."
+  },
+  {
+    "query": "What is the Bhagavad Gita about?",
+    "relevant_chunks": [
+      {"parva_name": "Bhishma Parva", "section_number": 25}
+    ],
+    "expected_answer_summary": "The Bhagavad Gita is Krishna's discourse to Arjuna on the battlefield of Kurukshetra, covering duty, the nature of the self, and righteous action.",
+    "category": "descriptive",
+    "notes": "Fixed by hybrid search - pure semantic search previously returned irrelevant Svargarohana recitation-blessing passages. BM25 lexical match on 'Gita' fixed this."
+  },
+  {
+    "query": "Who was Draupadi?",
+    "relevant_chunks": [
+      {"parva_name": "Adi Parva", "section_number": 169},
+      {"parva_name": "Sabha Parva", "section_number": 67}
+    ],
+    "expected_answer_summary": "Draupadi was the daughter of King Drupada of Panchala, born from a sacrificial fire, who became the wife of all five Pandava brothers after Arjuna won her at her swayamvara.",
+    "category": "descriptive",
+    "notes": "Retrieval returned near-duplicate chunks (Sabha Parva 66 and 67) with identical text - corpus has repeated passages in KMG translation. Check if this skews the answer toward the dice-game framing rather than her origin."
+  },
+  {
+    "query": "What happened at the dice game?",
+    "relevant_chunks": [
+      {"parva_name": "Sabha Parva", "section_number": 65},
+      {"parva_name": "Sabha Parva", "section_number": 66},
+      {"parva_name": "Sabha Parva", "section_number": 67}
+    ],
+    "multi_query": true,
+    "expected_answer_summary": "Yudhishthira lost everything including his kingdom, brothers, himself, and Draupadi to Shakuni's loaded dice in a game against Duryodhana, leading to Draupadi being dragged into the assembly hall.",
+    "category": "factual_event",
+    "notes": "First two results were good (Sabha Parva 49 and Vana Parva 14), but results 3-5 drifted to general Adi Parva references rather than the dice game itself."
+  },
+  {
+    "query": "Why did Karna refuse to fight under Bhishma?",
+    "relevant_chunks": [
+      {"parva_name": "Drona Parva", "section_number": 1},
+      {"parva_name": "Bhishma Parva", "section_number": 124}
+    ],
+    "expected_answer_summary": "Karna sat out the first ten days of the war because of his animosity toward Bhishma, who had repeatedly belittled him; he only joined after Bhishma fell.",
+    "category": "motivational",
+    "notes": "Best-performing query in initial testing - hybrid retrieval correctly surfaced both the context (Drona Parva 1) and Bhishma's direct speech to Karna (Bhishma Parva 124)."
+  },
+  {
+    "query": "What was the reason for the war?",
+    "relevant_chunks": [
+      {"parva_name": "Udyoga Parva", "section_number": 20},
+      {"parva_name": "Udyoga Parva", "section_number": 58}
+    ],
+    "expected_answer_summary": "The war stemmed from the Kauravas' refusal to return the Pandavas' rightful share of the kingdom after their exile, despite peace negotiations.",
+    "category": "motivational",
+    "notes": "Answer was coherent but had the [Source N] citation leak (pre-fix). Re-test after citation fix to confirm format is now [Parva Name, Section X]."
+  },
+  {
+    "query": "Describe the flag on Arjuna's chariot",
+    "relevant_chunks": [
+      {"parva_name": "Virata Parva", "section_number": 46}
+    ],
+    "expected_answer_summary": "Arjuna's banner bore the image of Hanuman (an ape with a lion's tail), a celestial device crafted by Vishwakarma, mounted on a golden staff.",
+    "category": "descriptive",
+    "notes": "CAUSED REPETITION LOOP in production - model repeated the same sentence about the ape device dozens of times until hitting token limit. Re-test after frequency_penalty + reduced max_tokens fix."
+  },
+  {
+    "query": "Name all parvas in the Mahabharata",
+    "relevant_chunks": [
+      {"parva_name": "Adi Parva", "section_number": 2}
+    ],
+    "expected_answer_summary": "The eighteen major parvas are: Adi, Sabha, Vana, Virata, Udyoga, Bhishma, Drona, Karna, Shalya, Sauptika, Stri, Shanti, Anushasana, Ashvamedha, Ashramavasika, Mausala, Mahaprasthanika, and Svargarohana.",
+    "category": "encyclopedic",
+    "notes": "KNOWN LIMITATION - not a retrieval fix candidate. Model mixed major parvas with sub-parvas (Paushya, Pauloma, Astika etc. are subdivisions of Adi Parva) because the retrieved chunk lists them together. RAG is not designed for structured enumeration; would need a hardcoded lookup or knowledge graph layer."
+  },
+  {
+    "query": "How did Arjuna die?",
+    "relevant_chunks": [{"parva_name": "Mahaprasthanika Parva", "section_number": 2}],
+    "multi_query": true,
+    "expected_answer_summary": "Arjuna's death (in the Mahaprasthanika Parva, during the Pandavas' final journey up the Himalayas) - he and his brothers fall one by one as they ascend, with Yudhishthira explaining each brother's flaw as the reason for their fall.",
+    "category": "character_death",
+    "notes": "FAILED in production - 'not enough information'. Same pattern as Bhishma. Note: Mahaprasthanika Parva is near the end of the epic (parva 17 of 18) - check if it's underrepresented in the corpus or if the death is narrated without using the word 'died'. TO FILL: search chunks.json for Mahaprasthanika Parva sections describing the ascent and Arjuna's fall."
+  },
+  {
+    "query": "How did Bhima die?",
+    "relevant_chunks": [{"parva_name": "Mahaprasthanika Parva", "section_number": 2}],
+    "multi_query": true,
+    "expected_answer_summary": "Same Mahaprasthanika Parva sequence as Arjuna - Bhima falls during the final ascent, with Yudhishthira attributing it to his gluttony/pride.",
+    "category": "character_death",
+    "notes": "FAILED in production - 'not enough information'. Same Mahaprasthanika Parva hypothesis as Arjuna. TO FILL: locate the specific section describing Bhima's fall."
+  },
+  {
+    "query": "How did Krishna die?",
+    "relevant_chunks": [
+      {"parva_name": "Mausala Parva", "section_number": 4}
+    ],
+    "expected_answer_summary": "Krishna's death is in the Mausala Parva - he is struck in the foot by a hunter named Jara who mistakes him for a deer, fulfilling an earlier curse.",
+    "category": "character_death",
+    "notes": "FAILED in production - 'not enough information'. Mausala Parva is parva 16 of 18, also near the end. Possible pattern: late parvas (Mausala, Mahaprasthanika, Svargarohana) may be underrepresented in chunking/embedding compared to earlier high-volume parvas like Bhishma/Drona/Karna which dominate war narrative. TO FILL: locate Mausala Parva section with the Jara/hunter incident."
+  },
+  {
+    "query": "How did Bhishma die?",
+    "relevant_chunks": [
+      {"parva_name": "Bhishma Parva", "section_number": 122},
+      {"parva_name": "Bhishma Parva", "section_number": 123}
+    ],
+    "multi_query": true,
+    "expected_answer_summary": "Arjuna struck Bhishma down with arrows on the tenth day of battle (with Shikhandi in front), but Bhishma remained alive on a bed of arrows until he chose to die after the war ended, during Uttarayana (the sun's northward course).",
+    "category": "character_death",
+    "notes": "Original failure case from earlier session. Distinguish from 'What was Bhishma's vow?' which succeeded - same character, different query angle, opposite outcomes. TO FILL: locate Bhishma Parva section with the fall (likely around section 119-120) AND Anushasana Parva section with his actual death/choice to depart."
+  },
+  {
+    "query": "How did Drona die?",
+    "relevant_chunks": [
+      {"parva_name": "Drona Parva", "section_number": 187},
+      {"parva_name": "Drona Parva", "section_number": 193}
+    ],
+    "expected_answer_summary": "Drona laid down his weapons upon hearing that his son Ashwatthama was dead (a lie orchestrated by the Pandavas, confirmed by Yudhishthira), and was then beheaded by Dhrishtadyumna while unarmed and in meditation.",
+    "category": "character_death",
+    "notes": "Compare against 'Who killed Dronacharya?' and 'How was Dronacharya killed?' which BOTH returned only Drona Parva Section 193 (Dhrishtadyumna) with identical answers - missing the Ashwatthama-elephant deception that makes this death morally significant. TO FILL: locate the section(s) describing the false news of Ashwatthama's death and Yudhishthira's role, likely earlier in Drona Parva than Section 193."
+  },
+  {
+    "query": "Ashwatthama the elephant",
+    "relevant_chunks": [
+      {"parva_name": "Drona Parva", "section_number": 187},
+      {"parva_name": "Shalya Parva", "section_number": 61}
+    ],
+    "multi_query": true,
+    "expected_answer_summary": "During the war, Bhima killed an elephant named Ashwatthama and then declared 'Ashwatthama is dead' - technically true about the elephant, but Drona heard it as news of his son's death, leading him to lay down his weapons.",
+    "category": "ambiguous_query",
+    "notes": "FAILED - 'not enough information'. Query is a fragment, not a question - possible the embedding/BM25 doesn't have enough signal from 'the elephant' alone to disambiguate from the warrior Ashwatthama (Drona's son), who is heavily represented in the corpus. TO FILL: try locating the elephant-naming incident specifically, likely in Drona Parva. Consider also adding a rephrased version of this query (e.g. 'What was the elephant named Ashwatthama?') as a SEPARATE test case to isolate whether this is a retrieval problem or a query-phrasing problem."
+  },
+  {
+    "query": "List the names of all the Pandavas",
+    "relevant_chunks": [
+      {"parva_name": "Adi Parva", "section_number": 124}
+    ],
+    "multi_query": true,
+    "expected_answer_summary": "The five Pandavas are Yudhishthira, Bhima, Arjuna, Nakula, and Sahadeva - sons of Pandu (the first three by Kunti, the twins by Madri).",
+    "category": "encyclopedic",
+    "notes": "FLAGGED - confidently WRONG answer with citations, not a 'not enough info' refusal. Production answer was: 'Yudhishthira, Arjuna, Kunti, Nakula, and Sahadeva' - Kunti is their MOTHER not a Pandava, and Bhima is missing entirely. This is the MOST SERIOUS failure found so far: high-confidence hallucination that looks well-sourced. Different from 'Name all parvas' (which correctly said info was incomplete) - here the model didn't hedge at all. TO FILL: find a chunk that lists the five Pandavas correctly (e.g. Adi Parva early sections) to check if retrieval found the right chunk and generation still got it wrong, or if retrieval itself missed the correct enumeration."
+  },
+  {
+    "query": "How was Dronacharya killed, including the events leading up to it",
+    "relevant_chunks": [
+      {"parva_name": "Drona Parva", "section_number": 187},
+      {"parva_name": "Drona Parva", "section_number": 193}
+    ],
+    "expected_answer_summary": "Same as 'How did Drona die?' above - the Ashwatthama deception context plus the beheading.",
+    "category": "factual_event",
+    "notes": "COMPANION CASE to 'How did Drona die?' - this rephrases the SAME underlying question with explicit framing ('including events leading up to it') to test whether more explicit query phrasing changes retrieval results compared to the terse 'Who killed dronacharya?' / 'How was Dronacharya killed?' which both returned only Section 193. If this rephrased version retrieves the Ashwatthama-deception chunks where the terse versions didn't, that's evidence the issue is QUERY PHRASING sensitivity rather than the chunks not existing/being embedded. TO FILL: same relevant_chunks as 'How did Drona die?' above."
+  }
+]

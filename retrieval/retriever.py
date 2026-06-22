@@ -1,9 +1,14 @@
+import os
 import json
+import requests
 import chromadb
 from pathlib import Path
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from rank_bm25 import BM25Okapi
-from typing import Optional
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT / ".env")
 
 COLLECTION_NAME   = "mahabharata"
 EMBED_MODEL_NAME  = "all-mpnet-base-v2"
@@ -19,6 +24,26 @@ RRF_TOP_K   = 20
 FINAL_TOP_N = 5
 
 RRF_K = 60
+
+NUM_REPHRASINGS = 2
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions"
+
+REPHRASING_PROMPT = """You are helping a search system find relevant passages in the Mahabharata text (Kisari Mohan Ganguli English translation).
+ 
+Generate {n} alternative search queries for the following question. Each rephrasing should approach the topic differently to maximize the chance of finding relevant passages.
+ 
+Original query: {query}
+ 
+Rules:
+1. Include specific Mahabharata terminology where relevant — parva names (e.g. Mahaprasthanika Parva, Mausala Parva), character epithets (e.g. Dhananjaya for Arjuna, Vrikodara for Bhima), Sanskrit terms
+2. Vary between broad semantic phrasings and specific keyword phrasings
+3. Think about how the KMG translation might actually describe this event — the language is archaic and formal
+4. Output ONLY the {n} queries, one per line, no numbering, no explanation, no preamble
+ 
+Alternative queries:"""
 
 def tokenise(text: str) -> list[str]:
     return text.lower().split()
@@ -144,6 +169,36 @@ class MahabharataRetriever:
  
         return merged
     
+    def rrf_merge_multi(
+            self,
+            ranked_lists: list[list[dict]],
+            top_k: int = RRF_TOP_K
+    ) -> list[dict]:
+        doc_scores: dict[tuple, dict] = {}
+ 
+        def _key(hit: dict) -> tuple:
+            return (hit["parva_number"], hit["section_number"], hit["chunk_index"])
+ 
+        for ranked_list in ranked_lists:
+            for rank, hit in enumerate(ranked_list, start=1):
+                k = _key(hit)
+                if k not in doc_scores:
+                    doc_scores[k] = {"rrf_score": 0.0, "hit": hit}
+                doc_scores[k]["rrf_score"] += 1.0 / (RRF_K + rank)
+ 
+        sorted_docs = sorted(
+            doc_scores.values(), key=lambda x: x["rrf_score"], reverse=True
+        )[:top_k]
+ 
+        merged = []
+        for entry in sorted_docs:
+            hit = entry["hit"].copy()
+            hit["rrf_score"] = round(entry["rrf_score"], 6)
+            hit["retriever"] = "hybrid_multi"
+            merged.append(hit)
+ 
+        return merged
+    
     def rerank(self, query: str, candidates: list[dict], top_n: int = FINAL_TOP_N) -> list[dict]:
         if not candidates:
             return []
@@ -158,6 +213,54 @@ class MahabharataRetriever:
         
         return reranked[:top_n]
     
+    def generate_rephrasings(
+            self,
+            query: str,
+            n: int = NUM_REPHRASINGS
+    ) -> list[str]:
+        
+        if not GROQ_API_KEY:
+            print("  [multi-query] GROQ_API_KEY not set — skipping rephrasings")
+            return []
+ 
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type" : "application/json",
+        }
+ 
+        payload = {
+            "model"      : GROQ_MODEL,
+            "messages"   : [{
+                "role"   : "user",
+                "content": REPHRASING_PROMPT.format(query=query, n=n),
+            }],
+            "max_tokens" : 150,
+            "temperature": 0.7,  # slightly higher than generation — we WANT varied phrasing
+        }
+ 
+        try:
+            response = requests.post(
+                GROQ_URL, headers=headers, json=payload, timeout=15
+            )
+            response.raise_for_status()
+            raw = response.json()["choices"][0]["message"]["content"].strip()
+ 
+            rephrasings = []
+            for line in raw.splitlines():
+                line = line.strip()
+                # Remove leading numbering like "1." or "1)" if model adds it
+                if line and not line.isspace():
+                    import re
+                    line = re.sub(r"^\d+[\.\)]\s*", "", line)
+                    if line:
+                        rephrasings.append(line)
+ 
+            return rephrasings[:n]  # cap at requested n even if model returns more
+ 
+        except Exception as e:
+            print(f"  [multi-query] Rephrasing failed: {e} — falling back to single-query")
+            return []
+    
     def retrieve(
         self,
         query: str,
@@ -165,7 +268,34 @@ class MahabharataRetriever:
         dense_top_k: int = DENSE_TOP_K,
         bm25_top_k: int = BM25_TOP_K,
         rrf_top_k: int = RRF_TOP_K,
+        multi_query: bool = False,
     ) -> list[dict]:
+        
+        if multi_query:
+            rephrasings = self.generate_rephrasings(query)
+ 
+            all_queries = [query] + rephrasings
+ 
+            if len(all_queries) == 1:
+                print("  [multi-query] No rephrasings generated — using single-query mode")
+                multi_query = False
+            else:
+                print(f"  [multi-query] Searching with {len(all_queries)} queries:")
+                for i, q in enumerate(all_queries):
+                    label = "(original)" if i == 0 else f"(rephrasing {i})"
+                    print(f"    {label}: {q}")
+ 
+                all_ranked_lists = []
+                for q in all_queries:
+                    all_ranked_lists.append(self.dense_search(q, top_k=dense_top_k))
+                    all_ranked_lists.append(self.bm25_search(q, top_k=bm25_top_k))
+ 
+                merged = self.rrf_merge_multi(all_ranked_lists, top_k=rrf_top_k)
+ 
+                if self.use_reranker:
+                    return self.rerank(query, merged, top_n=final_top_n)
+                else:
+                    return merged[:final_top_n]
         
         dense_hits  = self.dense_search(query, top_k=dense_top_k)
         bm25_hits   = self.bm25_search(query, top_k=bm25_top_k)
@@ -182,22 +312,25 @@ if __name__ == "__main__":
     retriever = MahabharataRetriever()
  
     test_queries = [
-        "Who killed Karna?",
-        "What is the Bhagavad Gita about?",
-        "Who was Draupadi?",
-        "What happened at the dice game?",
-        "Why did Karna refuse to fight under Bhishma?",
+        ("How did Arjuna die?",   True),
+        ("How did Bhishma die?",  True),
+        ("How did Krishna die?",  False),
+        ("Who killed Karna?",     False),
     ]
  
-    for query in test_queries:
+    for query, use_multi in test_queries:
+        mode = "MULTI" if use_multi else "SINGLE"
         print(f"\n{'='*70}")
-        print(f"Query: {query}")
+        print(f"Query [{mode}]: {query}")
         print(f"{'='*70}")
  
-        results = retriever.retrieve(query)
+        results = retriever.retrieve(query, multi_query=use_multi)
  
         for i, r in enumerate(results, 1):
-            rerank_str = f"  rerank={r.get('rerank_score', 'n/a'):.4f}" if "rerank_score" in r else ""
+            rerank_str = (
+                f"  rerank={r['rerank_score']:.4f}"
+                if "rerank_score" in r else ""
+            )
             print(
                 f"\n  [{i}] {r['parva_name']}, Section {r['section_number']} "
                 f"(chunk {r['chunk_index']})  "
