@@ -9,3 +9,4 @@ data/txt/
 check_text.py
 check_chunks.py
 check_retrieval.py
+evaluation/results/

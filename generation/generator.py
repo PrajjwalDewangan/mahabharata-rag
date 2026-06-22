@@ -216,7 +216,7 @@ class MahabharataGenerator:
         print(f"  LLM backend : {env_label} ({model})")
 
     def chat(self, query: str, verbose: bool = False) -> dict:
-        chunks = self.retriever.retrieve(query)
+        chunks = self.retriever.retrieve(query, multi_query=True)
 
         if verbose:
             print("\n--- Retrieved Chunks ---")
