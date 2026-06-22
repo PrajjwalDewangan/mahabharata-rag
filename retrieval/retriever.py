@@ -218,13 +218,13 @@ class MahabharataRetriever:
             query: str,
             n: int = NUM_REPHRASINGS
     ) -> list[str]:
-        
+        api_key = os.getenv("GROQ_API_KEY", "")
         if not GROQ_API_KEY:
             print("  [multi-query] GROQ_API_KEY not set — skipping rephrasings")
             return []
  
         headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type" : "application/json",
         }
  
